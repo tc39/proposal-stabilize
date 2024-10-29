@@ -35,25 +35,42 @@ const makeSubclass = () => {
     }
     /**
      * @param {Subclass} key
+     * @param {any} value
      */
-    static set(key) {
-      new Subclass(key);
+    static set(key, value) {
+      new Subclass(key, value);
     }
   };
 }
 
+/**
+ * @template {object} K
+ * @template {object} V
+ */
 export class WeakishMap {
   #klass
   constructor() {
     this.#klass = makeSubclass();
   }
+  /**
+   * @param {any} key
+   * @returns {key is K}
+   */
   has(key) {
     return this.#klass.has(key);
   }
+  /**
+   * @param {K} key
+   * @returns {V}
+   */
   get(key) {
     return this.#klass.get(key);
   }
-  set(key) {
-    this.#klass.set(key);
+  /**
+   * @param {K} key
+   * @param {V} value
+   */
+  set(key, value) {
+    this.#klass.set(key, value);
   }
 }
