@@ -74,3 +74,14 @@ export class WeakishMap {
     this.#klass.set(key, value);
   }
 }
+
+Object.freeze(Object.prototype);
+
+function Point(x, y) {
+  this.x = y; this.y = y;
+}
+
+Point.prototype.toString =
+  function () {
+    return `<${this.x},${this.y}`;
+  };
