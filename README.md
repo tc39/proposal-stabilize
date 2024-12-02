@@ -7,23 +7,24 @@ Proposal for tc39 of new integrity distinctions for mitigating
 - The return-override-mistake
 - Proxy reentrancy hazards
 
-Currently Stage 0. Currently proposed to advance to stage 1.
+## Status
+
+**Stage**: 0
 
 Co-champions:
-- Mark S. Miller, Agoric
-- Chip Morningstar, Metamask
-- Richard Gibson, Agoric
-- Mathieu Hofman, Agoric
+- Mark S. Miller (@erights)
+- Chip Morningstar (@fudco)
+- Richard Gibson (@gibson042)
+- Mathieu Hofman (@mhofman)
 
 ## Presentation history
 
-
+- ***for stage 1*** - November 2024 structs working group ([slides.key](./stabilize-talks/stabilize-stage1-as-recorded-at-structs-group.key), [slides.pdf](./stabilize-talks/stabilize-stage1-as-presented-at-structs-group.pdf), [video](https://www.youtube.com/watch?v=VHr4Jvvt0vc))
+- ***for stage 1*** - December 2024 tc39 plenary ([slides.key](./stabilize-talks/stabilize-stage1.key), [slides.pdf](./stabilize-talks/stabilize-stage1.pdf), [docs slides](https://docs.google.com/presentation/d/1474EreKln5bErl-pMUUq2PnX5LRo2Z93jxxGBNbZmco/edit?usp=sharing))
 
 ## Background
 
-Standard JavaScript has three unpleasant but unsuppressible features that we'd like to find some way to suppress or evade.
-
-
+Standard JavaScript has three unpleasant but unsuppressible features that we'd like to find some way to mitigate.
 
 ### The assignment-override-mistake.
 
@@ -36,9 +37,12 @@ function Point(x, y) {
 
 Point.prototype.toString =
   function () {
-    return `<${this.x},${this.y}`;
+    return `<${this.x},${this.y}>`;
   };
 ```
+
+Leaving aside the `Object.freeze` on the first statement, there is a tremendous amount of legacy code on the web resembling the second two statements, where `Point` is a class-like constructor `function` whose instances inherit a `toString` method from `Point.prototype`. In this common legacy pattern, this `toString` method is defined by ***assignment*** to `Point.prototype`, to ***override*** the `Object.prototype.toString`, which the instances would otherwise have inherited.
+
 
 Say we have an object `y` that inherits the `foo` property from ancestor object `x`. When `x.foo` is writable, assigning `y.foo = value` will create a new own `foo` property on `y` that *overrides* the `foo` property that `y` had inherited from `x`. The assignment-override-mistake (often referred to simply as the "override-mistake") is that if `x.foo` was a non-writable data property, `y.foo = value` will throw rather than creating a new own property on `y`.
 
