@@ -56,30 +56,30 @@ const makePrivateTagger = () => {
  * @template {object} V
  */
 export class WeakishMap {
-  #klass
+  #tagger
   constructor() {
-    this.#klass = makePrivateTagger();
+    this.#tagger = makePrivateTagger();
   }
   /**
    * @param {any} key
    * @returns {key is K}
    */
   has(key) {
-    return this.#klass.has(key);
+    return this.#tagger.has(key);
   }
   /**
    * @param {K} key
    * @returns {V}
    */
   get(key) {
-    return this.#klass.get(key);
+    return this.#tagger.get(key);
   }
   /**
    * @param {K} key
    * @param {V} value
    */
   set(key, value) {
-    this.#klass.set(key, value);
+    this.#tagger.set(key, value);
   }
 }
 
