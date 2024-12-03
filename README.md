@@ -71,7 +71,7 @@ class PrivateTagger extends Trojan {
   }
 }
 
-new PrivateTagger(freeze(Object.prototype), 'a'); // private field added to primordial Object.prototype
+new PrivateTagger(freeze(Object.prototype), ''); // adds private field to %Object.prototype%
 ```
 
 The `Trojan` constructor above ends with an explict `return` of its `key` argument. This has the peculiar effect that calling it as `super(key)` in the `PrivateTagger` constructor treats an explicitly returned `key` object as if it were an instance of `PrivateTagger`, binding it to `this` and initializing it with a private field `#value`. This happens even if the `key` is a preexisting frozen object. The JavaScript spec explains this semantics as-if there is a hidden `WeakMap` within each such class definition. Indeed, [return-override-weakmap.js](./src/return-override-weakmap.js) uses this technique to implement a `WeakMap`-like abstraction. This has several unpleasant consequences.
