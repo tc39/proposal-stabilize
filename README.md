@@ -2,7 +2,7 @@
 
 Better support for high integrity programming by extending the existing system of integrity "levels".
 
-Proposal for tc39 of new integrity "traits" for mitigating
+Proposal for TC39 of new integrity "traits" for mitigating
 - The assignment-override-mistake
 - The return-override-mistake
 - Proxy reentrancy hazards
@@ -21,7 +21,7 @@ Co-champions:
 ## Presentation history
 
 - ***for stage 1*** - November 2024 structs working group ([slides.key](./stabilize-talks/stabilize-stage1-as-recorded-at-structs-group.key), [slides.pdf](./stabilize-talks/stabilize-stage1-as-presented-at-structs-group.pdf), [video](https://www.youtube.com/watch?v=VHr4Jvvt0vc))
-- ***for stage 1*** - December 2024 tc39 plenary ([slides.key](./stabilize-talks/stabilize-stage1.key), [slides.pdf](./stabilize-talks/stabilize-stage1.pdf), [docs slides](https://docs.google.com/presentation/d/1474EreKln5bErl-pMUUq2PnX5LRo2Z93jxxGBNbZmco/edit?usp=sharing))
+- ***for stage 1*** - December 2024 TC39 plenary ([slides.key](./stabilize-talks/stabilize-stage1.key), [slides.pdf](./stabilize-talks/stabilize-stage1.pdf), [docs slides](https://docs.google.com/presentation/d/1474EreKln5bErl-pMUUq2PnX5LRo2Z93jxxGBNbZmco/edit?usp=sharing))
 
 ## Background
 
@@ -50,11 +50,11 @@ Leaving aside the `Object.freeze` on the first statement, there is a tremendous 
 
 However, in an environment in which `Object.prototype` is naive frozen, as in the first statement above, due to the assignment-override-mistake, the assignment in the third statement fails. In strict code it fails with a thrown exception. Even worse, in sloppy code, it fails silently, with the code then proceeding to misbehave. The assignment-override-mistake is that an inherited non-writable data property, such as the `Object.prototype.toString` property after the `freeze` cannot be overriden by assignment to an inheriting object, such as `Point.prototype`.
 
-The ses-shim implementation of Hardened JS works around this problem for a limited set of primordial properties by first turning them into accessor properties whose setter emulates what the behavior of such an assignment would be had tc39 not made the assignment-override-mistake. However, we only do this for limited set because this technique is expensive, awkward, and non-transparent.
+The ses-shim implementation of Hardened JS works around this problem for a limited set of primordial properties by first turning them into accessor properties whose setter emulates what the behavior of such an assignment would be had TC39 not made the assignment-override-mistake. However, we only do this for limited set because this technique is expensive, awkward, and non-transparent.
 
 With this limited workaround, a tremendous amount of existing JavaScript code written with no awareness of Hardened JS nevertheless runs under Hardened JS compatibly. However, the vast majority of existing code that fails to run under Hardened JS fails because of the override mistake. Other systems that freeze the primordials report similar incompatibility. Some systems have given up on freezing primordials, and the resulting integrity benefits, due to these compatibility costs. Indeed, we find that ***the assignment override mistake is the greatest deterrence to higher integrity programming in JavaScript***.
 
-After extensive investigation, we do not know of ***any*** non-test production code that intentionally makes use of the assignment-override-mistake. Thus, we still hope that it could simply be fixed language-wide without breaking the web. If this turns out to be possible, we would vastly prefer that over this proposal's approach to locally mitigate it, explained below. However, experiments to date did run into an accidental dependency, that still makes web breakage hard to evaluate (TODO links needed). This caused tc39 to back out of an earlier attempt to fix it language-wide. Hence the inclusion within this proposal.
+After extensive investigation, we do not know of ***any*** non-test production code that intentionally makes use of the assignment-override-mistake. Thus, we still hope that it could simply be fixed language-wide without breaking the web. If this turns out to be possible, we would vastly prefer that over this proposal's approach to locally mitigate it, explained below. However, experiments to date did run into an accidental dependency, that still makes web breakage hard to evaluate (TODO links needed). This caused TC39 to back out of an earlier attempt to fix it language-wide. Hence the inclusion within this proposal.
 
 ### The return-override-mistake
 
