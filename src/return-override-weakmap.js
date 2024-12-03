@@ -5,6 +5,7 @@ class Trojan {
 }
 
 const makePrivateTagger = () => {
+  const tombstone = Symbol('deleted');
   return class PrivateTagger extends Trojan {
     #value
     constructor(key, value) {
@@ -13,12 +14,11 @@ const makePrivateTagger = () => {
     }
     /**
      * @param {any} key
-     * @returns {key is PrivateTagger}
+     * @returns {boolean}
      */
     static has(key) {
       try {
-        key.#value;
-        return true;
+        return key.#value !== tombstone;
       } catch {
         return false;
       }
@@ -28,7 +28,8 @@ const makePrivateTagger = () => {
      */
     static get(key) {
       try {
-        return key.#value;
+        const value = key.#value;
+        return value === tombstone ? undefined : value;
       } catch {
         return undefined;
       }
@@ -40,15 +41,22 @@ const makePrivateTagger = () => {
     static set(key, value) {
       new PrivateTagger(key, value);
     }
+    /**
+     * @param {PrivateTagger} key
+     */
+    static delete(key) {
+      try {
+        key.#value = tombstone;
+      } catch {}
+    }
   };
 }
 
 /**
  * A `WeakMap`-like abstraction built using the `class` syntax and its support
- * for the return-override-mistake. This simple form of the technique cannot
- * implement the `delete` method.
+ * for the return-override-mistake.
  *
- * Because the browser global `windowProxy` object is exempt from the
+ * Because the browser global WindowProxy object is exempt from the
  * return-override-mistake by special dispensation, currently, that object
  * alone cannot be used as a key in a `WeakishMap`.
  *
@@ -62,7 +70,7 @@ export class WeakishMap {
   }
   /**
    * @param {any} key
-   * @returns {key is K}
+   * @returns {boolean}
    */
   has(key) {
     return this.#tagger.has(key);
@@ -80,6 +88,12 @@ export class WeakishMap {
    */
   set(key, value) {
     this.#tagger.set(key, value);
+  }
+  /**
+   * @param {K} key
+   */
+  delete(key) {
+    return this.#tagger.delete(key);
   }
 }
 
