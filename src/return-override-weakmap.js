@@ -1,11 +1,11 @@
-class Superclass {
+class Trojan {
   constructor(key) {
     return key;
   }
 }
 
-const makeSubclass = () => {
-  return class Subclass extends Superclass {
+const makePrivateTagger = () => {
+  return class PrivateTagger extends Trojan {
     #value
     constructor(key, value) {
       super(key);
@@ -13,7 +13,7 @@ const makeSubclass = () => {
     }
     /**
      * @param {any} key
-     * @returns {key is Subclass}
+     * @returns {key is PrivateTagger}
      */
     static has(key) {
       try {
@@ -24,7 +24,7 @@ const makeSubclass = () => {
       }
     }
     /**
-     * @param {Subclass} key
+     * @param {PrivateTagger} key
      */
     static get(key) {
       try {
@@ -34,11 +34,11 @@ const makeSubclass = () => {
       }
     }
     /**
-     * @param {Subclass} key
+     * @param {PrivateTagger} key
      * @param {any} value
      */
     static set(key, value) {
-      new Subclass(key, value);
+      new PrivateTagger(key, value);
     }
   };
 }
@@ -58,7 +58,7 @@ const makeSubclass = () => {
 export class WeakishMap {
   #klass
   constructor() {
-    this.#klass = makeSubclass();
+    this.#klass = makePrivateTagger();
   }
   /**
    * @param {any} key
