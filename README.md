@@ -59,11 +59,11 @@ After extensive investigation, we do not know of ***any*** non-test production c
 ### The return-override-mistake
 
 ```js
-class Superclass {
+class Trojan {
   constructor(key) { return key; }
 }
 
-class Subclass extends Superclass {
+class PrivateTagger extends Trojan {
   #value
   constructor(key, value) {
     super(key);
@@ -71,13 +71,13 @@ class Subclass extends Superclass {
   }
 }
 
-new Subclass(freeze(Object.prototype), 'a'); // private field added to primordial
+new PrivateTagger(freeze(Object.prototype), 'a'); // private field added to primordial Object.prototype
 ```
 
-The `Superclass` constructor above ends with an explict `return` of its `key` argument. This has the peculiar effect that calling it as `super(key)` in the `Subclass` constructor treats an explicitly returned `key` object as if it were an instance of `Subclass`, binding it to `this` and initializing it with a private field `#value`. This happens even if the `key` is a preexisting frozen object. The JavaScript spec explains this semantics as-if there is a hidden `WeakMap` within each such class definition. Indeed, [return-override-weakmap.js](./src/return-override-weakmap.js) uses this technique to implement a `WeakMap`-like abstraction. This has several unpleasant consequences.
+The `Trojan` constructor above ends with an explict `return` of its `key` argument. This has the peculiar effect that calling it as `super(key)` in the `PrivateTagger` constructor treats an explicitly returned `key` object as if it were an instance of `PrivateTagger`, binding it to `this` and initializing it with a private field `#value`. This happens even if the `key` is a preexisting frozen object. The JavaScript spec explains this semantics as-if there is a hidden `WeakMap` within each such class definition. Indeed, [return-override-weakmap.js](./src/return-override-weakmap.js) uses this technique to implement a `WeakMap`-like abstraction. This has several unpleasant consequences.
 
 ```js
-new Subclass(struct, 'a'); // unpleasant shape change
+new PrivateTagger(struct, 'a'); // unpleasant shape change
 ```
 
 All browser JavaScript implementations that we know of implement the addition of such internal fields by shape change of the object, much like their implementation of adding public properties. In V8, for example, both involve changing the object's so-called *hidden class*, which is used for internal bookkeeping of objects with common shapes.
@@ -85,7 +85,7 @@ All browser JavaScript implementations that we know of implement the addition of
 An engineering goals of [structs and shared structs](https://tc39.es/proposal-structs/) is that all instances of the same (class-like) struct definition have the same statically-knowable shape, enabling compilation of struct methods into higher speed code. However, this would conflict with uses of return override as above, with a struct as key, since the addition of the private field would cause a shape change. In theory this could be fixed in such engines at a cost in additional implementation complexity. This is a cost no one wants to pay to support a "feature" that is widely disparaged anyway.
 
 ```js
-new Subclass(representative, 'a'); // makes gc of virtual objects observable
+new PrivateTagger(representative, 'a'); // makes gc of virtual objects observable
 ```
 
 The Agoric platform provides the abstraction mechanisms for defining virtual objects, a kind of virtual memory for objects, where the number of such objects can vastly exceed what can pratically be stored in the JavaScript engine's in-memory heap. Like pages in a virtual memory system, such objects are primarily represented in longer term external storage and "paged in" on demand. In the analogy, the equivalent of a paged-in physical page is a *representative* -- a regular JavaScript object that represents the virtual object, and continues to represent it as long as it is not collected by the language engine's garbage collector. When such a representative is collected, the virtual object still exists in external storage, to be paged back in on demand.
@@ -101,7 +101,7 @@ The problem arises when a representative is weakly held. There are three mechani
 - The return-override-mistake makes weakmap-like functionality ***reachable by syntax***, and therefore not pratically virtualizable. If return-override is used with a virtual-object representative as key, the installed private field will observably disappear whenever the representative happens to be collected, to be succeeded by a new representative. Virtualizing this hidden weakmap-like functionality would instead necessitate a painful rewrite to remove all class private fields from the target language. This is too costly to be practical.
 
 ```js
-new Subclass(window, 'a'); // fails only on browser global WindowProxy object
+new PrivateTagger(window, 'a'); // fails only on browser global WindowProxy object
 ```
 
 Due to the way browsers implement the browser global [WindowProxy](https://developer.mozilla.org/en-US/docs/Glossary/WindowProxy) object, it would be painful for them to support the addition of private fields demanded by the return-override-mistake. Instead, as a special dispensation, browser global WindowProxy objects specifically are exempt from this requirement.

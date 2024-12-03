@@ -1,11 +1,12 @@
-class Superclass {
+class Trojan {
   constructor(key) {
     return key;
   }
 }
 
-const makeSubclass = () => {
-  return class Subclass extends Superclass {
+const makePrivateTagger = () => {
+  const tombstone = Symbol('deleted');
+  return class PrivateTagger extends Trojan {
     #value
     constructor(key, value) {
       super(key);
@@ -13,42 +14,49 @@ const makeSubclass = () => {
     }
     /**
      * @param {any} key
-     * @returns {key is Subclass}
+     * @returns {boolean}
      */
     static has(key) {
       try {
-        key.#value;
-        return true;
+        return key.#value !== tombstone;
       } catch {
         return false;
       }
     }
     /**
-     * @param {Subclass} key
+     * @param {PrivateTagger} key
      */
     static get(key) {
       try {
-        return key.#value;
+        const value = key.#value;
+        return value === tombstone ? undefined : value;
       } catch {
         return undefined;
       }
     }
     /**
-     * @param {Subclass} key
+     * @param {PrivateTagger} key
      * @param {any} value
      */
     static set(key, value) {
-      new Subclass(key, value);
+      new PrivateTagger(key, value);
+    }
+    /**
+     * @param {PrivateTagger} key
+     */
+    static delete(key) {
+      try {
+        key.#value = tombstone;
+      } catch {}
     }
   };
 }
 
 /**
  * A `WeakMap`-like abstraction built using the `class` syntax and its support
- * for the return-override-mistake. This simple form of the technique cannot
- * implement the `delete` method.
+ * for the return-override-mistake.
  *
- * Because the browser global `windowProxy` object is exempt from the
+ * Because the browser global WindowProxy object is exempt from the
  * return-override-mistake by special dispensation, currently, that object
  * alone cannot be used as a key in a `WeakishMap`.
  *
@@ -56,30 +64,36 @@ const makeSubclass = () => {
  * @template {object} V
  */
 export class WeakishMap {
-  #klass
+  #tagger
   constructor() {
-    this.#klass = makeSubclass();
+    this.#tagger = makePrivateTagger();
   }
   /**
    * @param {any} key
-   * @returns {key is K}
+   * @returns {boolean}
    */
   has(key) {
-    return this.#klass.has(key);
+    return this.#tagger.has(key);
   }
   /**
    * @param {K} key
    * @returns {V}
    */
   get(key) {
-    return this.#klass.get(key);
+    return this.#tagger.get(key);
   }
   /**
    * @param {K} key
    * @param {V} value
    */
   set(key, value) {
-    this.#klass.set(key, value);
+    this.#tagger.set(key, value);
+  }
+  /**
+   * @param {K} key
+   */
+  delete(key) {
+    return this.#tagger.delete(key);
   }
 }
 
