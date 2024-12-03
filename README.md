@@ -85,16 +85,6 @@ This has several unpleasant consequences. All browser JavaScript implementations
 An engineering goals of [structs and shared structs](https://tc39.es/proposal-structs/) is that all instances of the same (class-like) struct definition have the same statically-knowable shape, enabling compilation of struct methods into higher speed code. However, this would conflict with uses of return override as above, with a struct as key, since the addition of the private field would cause a shape change. In theory this could be fixed in such engines at a cost in additional implementation complexity. This is a cost no one wants to pay to support a "feature" that likely no one wants to actually use anyway.
 
 ```js
-harden(Subclass); // transitive `freeze`. Is `Subclass` pure?
-const obj = freeze({}); // `obj` is clearly pure
-new Subclass(obj, 'a'); // private field added to frozen object
-```
-
-In a confinement scenario, where Alice, Bob, and Carol are three programs, if Alice runs first, loads Bob and Carol in separately confined compartments, where they share only pure objects, i.e., objects with no mutable state, Bob and Carol should not be able to use these pure objects to communicate. We certainly want to consider a simple prozen object like `freeze({})` to be pure. If a class is transitively frozen, i.e., if the class and all objects transitively reachable from it by property and inheritance walk are frozen, and the code of the class has not lexically captured anything mutable, then we'd like, for purposes of security analysis, to consider such a class to be pure. Indeed, the purity predicate built into the Moddable XS implementation does consider both of these to be pure.
-
-But because of the return-override-mistake, Bob and Carol could communicate given only such a pair. Where is the mutability enabling this communications? The only possible answer today is that the hidden weakmap within the subclass implementation is the source of mutability. Any subclass that declares a private field and inherits from a superclass that *might* engage in return-override to provide a pre-existing object would need to be considered impure. But this would break the alignment in Moddable XS between purity and the ability to store such classes in ROM. It would mean that a module that exports only such classes would itself need to be considered impure, even if it could not in practice enable communications. This inhibits sharing of such effectively-pure modules between programs, such as Bob and Carol, that should not be able to communicate.
-
-```js
 new Subclass(representative, 'a'); // makes gc of virtual objects observable
 ```
 
