@@ -74,13 +74,13 @@ class Subclass extends Superclass {
 new Subclass(freeze(Object.prototype), 'a'); // private field added to primordial
 ```
 
-The `Superclass` constructor above ends with an explict `return` of its `key` argument. This has the peculiar effect that calling it as `super(key)` in the `Subclass` constructor treats an explicitly returned `key` object as if it were an instance of `Subclass`, binding it to `this` and initializing it with a private field `#value`. This happens even if the `key` is a preexisting frozen object. The JavaScript spec explains this semantics as-if there is a hidden `WeakMap` within each such class definition. Indeed, [return-override-weakmap.js](./src/return-override-weakmap.js) uses this technique to implement a `WeakMap`-like abstraction.
-
-This has several unpleasant consequences. All browser JavaScript implementations that we know of implement the addition of such internal fields by shape change of the object, much like their implementation of adding public properties. In V8, for example, both involve changing the object's so-called *hidden class*, which is used for internal bookkeeping of objects with common shapes.
+The `Superclass` constructor above ends with an explict `return` of its `key` argument. This has the peculiar effect that calling it as `super(key)` in the `Subclass` constructor treats an explicitly returned `key` object as if it were an instance of `Subclass`, binding it to `this` and initializing it with a private field `#value`. This happens even if the `key` is a preexisting frozen object. The JavaScript spec explains this semantics as-if there is a hidden `WeakMap` within each such class definition. Indeed, [return-override-weakmap.js](./src/return-override-weakmap.js) uses this technique to implement a `WeakMap`-like abstraction. This has several unpleasant consequences.
 
 ```js
 new Subclass(struct, 'a'); // unpleasant shape change
 ```
+
+All browser JavaScript implementations that we know of implement the addition of such internal fields by shape change of the object, much like their implementation of adding public properties. In V8, for example, both involve changing the object's so-called *hidden class*, which is used for internal bookkeeping of objects with common shapes.
 
 An engineering goals of [structs and shared structs](https://tc39.es/proposal-structs/) is that all instances of the same (class-like) struct definition have the same statically-knowable shape, enabling compilation of struct methods into higher speed code. However, this would conflict with uses of return override as above, with a struct as key, since the addition of the private field would cause a shape change. In theory this could be fixed in such engines at a cost in additional implementation complexity. This is a cost no one wants to pay to support a "feature" that is widely disparaged anyway.
 
@@ -98,22 +98,23 @@ The problem arises when a representative is weakly held. There are three mechani
 
     To uphold the illusion, on initialization, our virtual object system reserves the real `WeakMap` and `WeakSet` constructors to itself, but provide substitute *virtualization-aware* `WeakMap` and `WeakSet` constructors. For non-representative keys, these pass through to the hidden real `WeakMap` and `WeakSet`. For representatives, it collaborates with the virtual object storage system to act as if the virtual object is the key, preserving the association past the lifetime of any one representative.
 
-- The return-override-mistake, which makes weakmap-like functionality ***reachable by syntax***, and therefore not pratically virtualizable. If return-override is used with a virtual-object representative as key, the installed private field will observably disappear whenever the representative happens to be colleected, to be succeeded by a new representative. Virtualizing this hidden weakmap-like functionality would instead necessitate a painful rewrite to remove all class private fields from the target language. This is too costly to be practical.
+- The return-override-mistake makes weakmap-like functionality ***reachable by syntax***, and therefore not pratically virtualizable. If return-override is used with a virtual-object representative as key, the installed private field will observably disappear whenever the representative happens to be collected, to be succeeded by a new representative. Virtualizing this hidden weakmap-like functionality would instead necessitate a painful rewrite to remove all class private fields from the target language. This is too costly to be practical.
 
 ```js
-new Subclass(window, 'a'); // fails only on browser global `windowProxy` object
+new Subclass(window, 'a'); // fails only on browser global WindowProxy object
 ```
 
-Due to the way browsers implement the browser global `windowProxy` object, it would be painful for them to support the addition of private fields demanded by the return-override-mistake. Instead, as a special dispensation, the browser global `windowProxy` object specifically is exempt from this requirement.
+Due to the way browsers implement the browser global [WindowProxy](https://developer.mozilla.org/en-US/docs/Glossary/WindowProxy) object, it would be painful for them to support the addition of private fields demanded by the return-override-mistake. Instead, as a special dispensation, browser global WindowProxy objects specifically are exempt from this requirement.
 
-Such a special exemption is an awkward complexity for a language spec, violates the principle of least surpise, and makes it impractical to perfectly emulate the browser global `windowProxy` object using any other object, including the global object of a constructed realm or compartment.
+Such a special exemption is an awkward complexity for a language spec, violates the principle of least surpise, and makes it impractical to perfectly emulate a browser global WindowProxy object using any other object, including the global object of a constructed realm or compartment.
 
 ### Proxy Reentrancy Hazards
 
 ```js
 function foo(suspect) {
-  if (!recordLike(freeze(suspect)))
+  if (!isRecord(freeze(suspect))) {
     throw Error(...);
+  }
   // ... suspend invariant ...
   ... suspect.bar ...
   // ... restore invariant ...
@@ -171,19 +172,20 @@ Proxies only need traps for the explicit integrity levels. Indeed, proxies have 
 
 We first thought to introduce just one new explicit integrity trait, *stable*, to mitigate all three problems, where all stable objects were frozen. However, this would fail to enable [structs and shared structs](https://tc39.es/proposal-structs/) to have efficient fixed-shape implementations. Structs and shared structs are born sealed, but they are not born frozen. But they could only have a fixed shape implementation if they are also born exempt from the return-override mistake.
 
-We would also be unable to retroactively rationalize the browser global `windowProxy` objects exemption from the return-override-mistake, nor enable faithful emulations using other objects, since none of these objects would normally even be non-extensible.
+We would also be unable to retroactively rationalize the browser global WindowProxy objects exemption from the return-override-mistake, nor enable faithful emulations using other objects, since none of these objects would normally even be non-extensible.
 
 ![Fully unbundled integrity traits](./stabilize-talks/images/4-fully-unbundled.png)
 
-Going to the other extreme, let's consider a full unbundling of integrity trait features into separate traits. In this diagram, the underlined bold italic itemps are the explicit integrity traits, the others would be emergent traits, and the arrows are the implication arrows among them. In this fully unbundled picture, each explicit trait only does one job, and they are more orthogonal to each other.
-- ***fixed*** - A fixed object would be exempt from the return-override mistake. The new behavior would follow the existing precedent of the browser global `windowProxy` object, so that we could retroactively rationalize it as carrying the fixed trait, and emulations could also be fixed to behave similarly. Structs would be born both sealed and fixed, but not frozen. There is no technical reason for fixed to imply any other integrity trait, though there may be adequate esthetic arguments.
-- ***overridable*** - An overridable object would be exempt from the assignment override mistake. This is easiest to specify if overribale implies frozen. We'd simply say that any data property inherited from an overridable object can be overridden by assignment. If overridable does not imply frozen, then it would only change the behavior of either non-writable data properties, or only non-writable non-configurable data properties. This would enable overridable to work for objects in which only some properties were non-writable.
+Going to the other extreme, let's consider a full unbundling of integrity trait features into separate traits. In this diagram, the underlined bold italic labels are the explicit integrity traits, the other labels are emergent integrity traits, and the arrows between them indicate implication. In this fully unbundled picture, each explicit trait only does one job, and they are more orthogonal to each other.
+- ***fixed*** - A fixed object would be exempt from the return-override mistake. The new behavior would follow the existing precedent of the browser global WindowProxy object, so that we could retroactively rationalize it as carrying the fixed trait, and emulations could also be fixed to behave similarly. Structs would be born both sealed and fixed, but not frozen. There is no technical reason for fixed to imply any other integrity trait, though there may be adequate esthetic arguments.
+- ***overridable*** - An overridable object would be exempt from the assignment override mistake. This is easiest to specify if overridable implies frozen. We'd simply say that any data property inherited from an overridable object can be overridden by assignment. If overridable does not imply frozen, then it would only change the behavior of either non-writable data properties, or only non-writable non-configurable data properties. This would enable overridable to work for objects in which only some properties were non-writable.
 - ***non-trapping*** - Non-trapping is *much* easier to specify (and likely implement) if non-trapping implies frozen, which we will assume here. In that case, a non-trapping object used as a proxy target would cause that proxy never to trap to its handler. Recall that if the target is frozen, the handler traps already cannot change the contents of a successful result. All they can do is interleave other code during the trap, raising reentrancy hazards, or throw, preventing a successful result from being reported. If the target is additionally non-trapping, then the proxy would act as if the handler had no traps, forwarding all operations onto the target. In other words, such a proxy would act exactly like its target in all ways except that it would have a distinct object identity. Following our earlier principles, such a proxy would itself be non-trapping.
 
 ```js
 function foo(suspect) {
-  if (!recordLike(beNonTrapping(suspect)))
+  if (!isRecord(beNonTrapping(suspect))) {
     throw Error(...);
+  }
   // ... suspend invariant ...
   ... suspect.bar ...
   // ... restore invariant ...
@@ -196,16 +198,19 @@ foo(new Proxy({ bar: 3 }), {
 
 An object that is non-trapping might still raise reentrancy hazards if it has accessor properties, or if it inherits from an object that itself raises reentrancy hazards. But if `recordLike` first checked that its argument is non-trapping, in addition to all its other checks, then it would indeed guarantee that a passing object is a record-like plain data object that cannot interleave any foreign code during property access, and thereby cannot raise reentrancy hazards.
 
-Like proxies, exotic objects are allowed to observably interleave user code or visible effects during access to alleged data properties. Indeed, the module namespace object of the [import defer proposal](https://docs.google.com/presentation/d/1yFbqn6px5rIwAVjBbXgrYgql1L90tKPTWZq2A5D6f5Q/edit#slide=id.p) would do so. An exotic object, like a proxy, can also refuse an attempt to impose a new explict integrity trait on it. A growable array-buffer refused to be made non-extensible. An exotic object that wishes to preserve this observable interleaving of user code or visible effects during property access would must refuse to be made non-trapping.
+Like proxies, exotic objects are allowed to observably interleave user code or visible effects during access to alleged data properties. Indeed, the module namespace object of the [import defer proposal](https://docs.google.com/presentation/d/1yFbqn6px5rIwAVjBbXgrYgql1L90tKPTWZq2A5D6f5Q/edit#slide=id.p) would do so. An exotic object, like a proxy, can also refuse an attempt to impose a new explict integrity trait on it (for example, a growable array-buffer refuses to be made non-extensible). An exotic object that wishes to preserve this observable interleaving of user code or visible effects during property access must therefore refuse to be made non-trapping.
 
 This successfully mitigates the proxy reentrancy hazards without introducing a predicate to tell whether an object is a proxy, which would threaten practical membrane transparency. Rather, `recordLike` only needs a predicate to detect whether an object is non-trapping. As with any other integrity trait, this would be transparently reflected from targets to their proxies.
 
 ### Unbunding non-extensible
 
 As long as we're considering an extreme unbundling of integrity traits, we could also consider unbundling non-extensible into the explicit orthogonal traits of
-- ***permanent-inheritance*** - only provides the feature on non-extensible of locking in what an object inherits from. The benefit is again retroactive rationalization and ability to virtualize. `Object.prototype` is both inheriting from `null`. By special dispensation, this cannot be changed, even though `Object.prototype` is born extensible. Likewise, by special dispensation, it is impossible to change which other the browser global `windowProxy` object inherits from. Because this ability is unavailable to non-proxy objects, they cannot be used to faithfully emulate the browser global `windowProxy` object.
+- ***permanent-inheritance*** - only provides the feature on non-extensible of locking in what an object inherits from. The benefit is again retroactive rationalization and ability to virtualize:
 
-    By unbundling this feature of non-extensible into a separate explict integrity trait, we could retroactively rationalize both of these, and enable more faithful emulation of the browser global `windowProxy` object.
+  - `Object.prototype` is born extensible and inheriting from `null`. By special dispensation, despite that extensibility, its inheritance cannot be changed.
+  - Likewise, by special dispensation, it is impossible to change inheritance of an extensible browser global [WindowProxy](https://developer.mozilla.org/en-US/docs/Glossary/WindowProxy) object. Because this ability is unavailable to non-proxy objects, they cannot be used to faithfully emulate a browser global WindowProxy.
+
+    By unbundling this feature of non-extensible into a separate explict integrity trait, we could retroactively rationalize both of these, and enable more faithful emulation of the browser global WindowProxy object.
 
 - ***no-new-props*** - just completes the unbundling, by extracting the remaining feature of non-extensible into a sparate explicit trait. A no-new-props object would be one that cannot grow any new own properties, even though we might still be able to change what object it inherits from.
 
@@ -217,14 +222,14 @@ If we unbundle non-extensible in this way, then non-extensible itself becomes an
 
 ### Unbundling and rebunding stable
 
-In this fully unbundled picture, stable would be emergent, but would still be strongest. Stable would still imply all the other integrity traits. [Hardened JS](https://hardenedjs.org/) would still shift to stabilizing all the primordials, rendering them frozen, exempt from the return-override-mistake, the assignment-override-mistake, and proxy reentrancy hazards. Each element help high integrity program, by preventing rude non-local surprises.
+In this fully unbundled picture, stable would be emergent, but would still be strongest. Stable would still imply all the other integrity traits. [Hardened JS](https://hardenedjs.org/) would still shift to stabilizing all the primordials, rendering them frozen, exempt from the return-override-mistake, the assignment-override-mistake, and proxy reentrancy hazards. Each trait helps support high integrity programs, by preventing rude non-local surprises.
 
-However, it makes less sense to keep non-trapping below stable. We initially thought to make non-trapping imply frozen, because one a proxy's target is frozen, the handler no longer has much utility. But if there are integrity levels not implied by non-trapping, then once an object is non-trapping it would no longer be able to intercept an attempt to make it, for example, fixed or overridable, or to test whether it is fixed or overridable. It seems that stable and non-trapping must each imply the other, suggesting that non-trapping should be bundled back into stable, and that stable thereby becomes explicit.
+However, it makes less sense to keep non-trapping below stable. We initially thought to make non-trapping imply frozen, because once a proxy's target is frozen, the handler no longer has much utility. But if there are integrity levels not implied by non-trapping, then once an object is non-trapping it would no longer be able to intercept an attempt to make it, for example, fixed or overridable, or to test whether it is fixed or overridable. It seems that stable and non-trapping must each imply the other, suggesting that non-trapping should be bundled back into stable, and that stable thereby becomes explicit.
 
 Although orthogonality is nice, many uses of these integrity traits will only want to use pleasant bundles. If we rebundle as much as possible, while still meeting our compelling use cases, we lose orthogonality, but we potentially have a system that is easier to understand and to implement. What is this minimal picture?
 
 ![Minimal proposed integry traits](./stabilize-talks/images/6-fully-bundled.png)
 
-This resembles our first try, with the one difference that the fixed trait, for mitigating the return-override-mistake, is broken out. Stable would still imply fixed, but an object could still be fixed without application of any of the other traits. This picture also omits the unbundling of non-extensible merely because the need does not currently seem compelling enough to be worth the cost. The main benefit would be retroactive rationalization of the permanent-inheritance behavior of `Object.prototype` and the browser global `windowProxy` object, as well as enabling a more faithful emulation of `windowProxy` without using a JavaScript proxy.
+This resembles our first try, with the one difference that the fixed trait, for mitigating the return-override-mistake, is separated from stable. Stable would still imply fixed, but an object could be made fixed without application of any other integrity traits. This picture also omits the unbundling of non-extensible, because the need does not currently seem sufficiently compelling to be worth its cost. The main benefit would be retroactive rationalization of the permanent-inheritance behavior of `Object.prototype` and the browser global WindowProxy objects, as well as enabling a more faithful emulation of WindowProxy without using a JavaScript proxy.
 
 The most plausible re-unbundling from here would be to again break out overridable and not make it imply frozen. This would mitigate the assignment-override-mistake for non-writable properties inherited from non-frozen objects. This is certainly coherent and simple to understand. This seems like a good question to investigate in Stage 1.
