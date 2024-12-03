@@ -74,15 +74,15 @@ class Subclass extends Superclass {
 new Subclass(freeze(Object.prototype), 'a'); // private field added to primordial
 ```
 
-The `Superclass` constructor above ends with an explict `return` statement. This has the peculiar effect that the subclass then treats this explicitly returned object as if it is an instance of the `Subclass`. In particular, in the subclass constructor the `super(key);` statement calls the `Superclass` constructor which returns `key`. The `Subclass` constructor then binds it to `this` and initializes it with a private `#value` field. This happens even if the `key` is a preexisting frozen object. The JavaScript spec explains this semantics as-if there is a hidden `WeakMap` within each such class definition. Indeed, [return-override-weakmap.js](./src/return-override-weakmap.js), which uses this technique to implement a `WeakMap`-like abstraction.
+The `Superclass` constructor above ends with an explict `return` of its `key` argument. This has the peculiar effect that calling it as `super(key)` in the `Subclass` constructor treats an explicitly returned `key` object as if it were an instance of `Subclass`, binding it to `this` and initializing it with a private field `#value`. This happens even if the `key` is a preexisting frozen object. The JavaScript spec explains this semantics as-if there is a hidden `WeakMap` within each such class definition. Indeed, [return-override-weakmap.js](./src/return-override-weakmap.js) uses this technique to implement a `WeakMap`-like abstraction.
+
+This has several unpleasant consequences. All browser JavaScript implementations that we know of implement the addition of such internal fields by shape change of the object, much like their implementation of adding public properties. In V8, for example, both involve changing the object's so-called *hidden class*, which is used for internal bookkeeping of objects with common shapes.
 
 ```js
 new Subclass(struct, 'a'); // unpleasant shape change
 ```
 
-This has several unpleasant consequences. All browser JavaScript implementations that we know of implements the addition of such internal fields by shape change of the object, much like their implementation of the addition of public properties. In v8, for example, both would involve change the object's so-called *hidden class*, which is internal bookkeeping for keeping track of objects with common shapes.
-
-An engineering goals of [structs and shared structs](https://tc39.es/proposal-structs/) is that all instances of the same (class-like) struct definition have the same statically-knowable shape, enabling compilation of struct methods into higher speed code. However, this would conflict with uses of return override as above, with a struct as key, since the addition of the private field would cause a shape change. In theory this could be fixed in such engines at a cost in additional implementation complexity. This is a cost no one wants to pay to support a "feature" that likely no one wants to actually use anyway.
+An engineering goals of [structs and shared structs](https://tc39.es/proposal-structs/) is that all instances of the same (class-like) struct definition have the same statically-knowable shape, enabling compilation of struct methods into higher speed code. However, this would conflict with uses of return override as above, with a struct as key, since the addition of the private field would cause a shape change. In theory this could be fixed in such engines at a cost in additional implementation complexity. This is a cost no one wants to pay to support a "feature" that is widely disparaged anyway.
 
 ```js
 new Subclass(representative, 'a'); // makes gc of virtual objects observable
