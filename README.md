@@ -10,9 +10,11 @@ Proposal for TC39 of new integrity "traits" for mitigating
 
 ## Status
 
+[The TC39 Process](https://tc39.es/process-document/)
+
 **Stage**: 1
 
-Co-champions:
+**Champions**:
 - Mark S. Miller (@erights)
 - Chip Morningstar (@fudco)
 - Richard Gibson (@gibson042)
