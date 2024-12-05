@@ -10,7 +10,7 @@ Proposal for TC39 of new integrity "traits" for mitigating
 
 ## Status
 
-**Stage**: 0
+**Stage**: 1
 
 Co-champions:
 - Mark S. Miller (@erights)
