@@ -23,7 +23,7 @@ Proposal for TC39 of new integrity "traits" for mitigating
 ## Presentation history
 
 - ***for stage 1*** - November 2024 structs working group ([slides.key](./stabilize-talks/stabilize-stage1-as-recorded-at-structs-group.key), [slides.pdf](./stabilize-talks/stabilize-stage1-as-presented-at-structs-group.pdf), [video](https://www.youtube.com/watch?v=VHr4Jvvt0vc))
-- ***for stage 1*** - December 2024 TC39 plenary ([slides.key](./stabilize-talks/stabilize-stage1.key), [slides.pdf](./stabilize-talks/stabilize-stage1.pdf), [docs slides](https://docs.google.com/presentation/d/1474EreKln5bErl-pMUUq2PnX5LRo2Z93jxxGBNbZmco/edit?usp=sharing))
+- ***for stage 1*** - December 2024 TC39 plenary ([slides.key](./stabilize-talks/stabilize-stage1.key), [slides.pdf](./stabilize-talks/stabilize-stage1.pdf), [docs slides](https://docs.google.com/presentation/d/1474EreKln5bErl-pMUUq2PnX5LRo2Z93jxxGBNbZmco/edit?usp=sharing), [video](https://youtu.be/UX8qLMlO2JY))
 
 ## Background
 
