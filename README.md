@@ -239,3 +239,5 @@ The most plausible re-unbundling from here would be to again break out overridab
 ## See Also
 
 [Propose to tc39 without override mistake #105](https://github.com/endojs/endo/issues/105)
+
+[harden as a new integrity level #1912](https://github.com/endojs/endo/issues/1912)
