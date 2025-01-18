@@ -235,3 +235,7 @@ Although orthogonality is nice, many uses of these integrity traits will only wa
 This resembles our first try, with the one difference that the fixed trait, for mitigating the return-override-mistake, is separated from stable. Stable would still imply fixed, but an object could be made fixed without application of any other integrity traits. This picture also omits the unbundling of non-extensible, because the need does not currently seem sufficiently compelling to be worth its cost. The main benefit would be retroactive rationalization of the permanent-inheritance behavior of `Object.prototype` and the browser global WindowProxy objects, as well as enabling a more faithful emulation of WindowProxy without using a JavaScript proxy.
 
 The most plausible re-unbundling from here would be to again break out overridable and not make it imply frozen. This would mitigate the assignment-override-mistake for non-writable properties inherited from non-frozen objects. This is certainly coherent and simple to understand. This seems like a good question to investigate in Stage 1.
+
+## See Also
+
+[Propose to tc39 without override mistake #105](https://github.com/endojs/endo/issues/105)
