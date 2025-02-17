@@ -241,3 +241,5 @@ The most plausible re-unbundling from here would be to again break out overridab
 [Propose to tc39 without override mistake #105](https://github.com/endojs/endo/issues/105)
 
 [harden as a new integrity level #1912](https://github.com/endojs/endo/issues/1912)
+
+[Normative: Make non-writable prototype properties not prevent assigning to instance #1320](https://github.com/tc39/ecma262/pull/1320)
