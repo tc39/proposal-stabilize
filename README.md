@@ -1,4 +1,4 @@
-# proposal: Stabilize, and other integrity traits
+# Stabilize, and other integrity traits
 
 Better support for high integrity programming by extending the existing system of integrity "levels".
 
